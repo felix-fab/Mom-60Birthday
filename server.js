@@ -8,6 +8,12 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Öffentliche Basis-URL, unter der die Seite erreichbar ist.
+// Nutzt du eine eigene Domain (z.B. geburtstag.felixfab.de), hier eintragen.
+// Oder per Umgebungsvariable setzen:  PUBLIC_URL=https://geburtstag.felixfab.de  npm start
+// Wenn leer, wird automatisch die lokale WLAN-IP ermittelt (nur im selben WLAN nutzbar).
+const PUBLIC_URL = process.env.PUBLIC_URL || "https://geburtstag.felixfab.de";
+
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
@@ -176,10 +182,12 @@ setInterval(() => {
 
 // ---------- HTTP ----------
 // Control-Ansicht (Organisator): zeigt Geräte + QR-Code
+// Der QR-Code verlinkt auf die DISPLAY-Seite (/display), damit Handys sich
+// direkt als Anzeige-Gerät verbinden – NICHT auf die Control-Seite.
 app.get("/", async (req, res) => {
-  const url = 'geburtstag.felixfab.de';
-  const qr = await QRCode.toDataURL(url, { width: 400, margin: 1 });
-  res.send(controlHtml(qr, url, displayUrl()));
+  const displayUrl = PUBLIC_URL.replace(/\/+$/, "") + "/display";
+  const qr = await QRCode.toDataURL(displayUrl, { width: 400, margin: 1 });
+  res.send(controlHtml(qr, displayUrl, PUBLIC_URL));
 });
 
 function displayUrl() {
@@ -208,7 +216,10 @@ app.get("/display", (req, res) => {
 });
 
 // ---------- Control HTML ----------
-function controlHtml(qr, url) {
+// qr = QR-Code-Bild (verlinkt auf die Display-Seite der Handys)
+// displayUrl = URL, die im QR-Code steht (was die Handys öffnen)
+// controlUrl = URL der Steuerungs-Seite (für den Organisator)
+function controlHtml(qr, displayUrl, controlUrl) {
   return `<!DOCTYPE html>
 <html lang="de">
 <head>
@@ -254,7 +265,8 @@ function controlHtml(qr, url) {
     <h2>📱 Handys verbinden</h2>
     <p class="sub">Jede Person scannt den QR-Code mit der Handykamera.</p>
     <img id="qr" src="${qr}" alt="QR-Code" />
-    <div class="urlbox">${url}</div>
+    <div class="urlbox">Handy-URL (im QR-Code):<br>${displayUrl}</div>
+    <div class="urlbox" style="margin-top:8px;">Steuerung (diese Seite):<br>${controlUrl}</div>
   </div>
   <div class="card">
     <h2>🎯 Geräte & Reihenfolge</h2>
@@ -338,6 +350,8 @@ document.getElementById("btnOrder").onclick = () => {
 // ---------- Start ----------
 const PORT = process.env.PORT || 3005;
 server.listen(PORT, () => {
-  console.log("🎉 Geburtstags-Show läuft auf " + displayUrl());
-  console.log("   Steuerung (Organisator): " + displayUrl() + "  (QR-Code dort)");
+  const ctrl = PUBLIC_URL || displayUrl();
+  console.log("🎉 Geburtstags-Show läuft auf " + PUBLIC_URL);
+  console.log("   Steuerung (Organisator): " + ctrl);
+  console.log("   Handy-Display (QR-Code): " + PUBLIC_URL.replace(/\/+$/, "") + "/display");
 });

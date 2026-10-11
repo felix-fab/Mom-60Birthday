@@ -18,16 +18,24 @@ Eine Website, bei der mehrere Personen ihre Handys nebeneinander halten. Über a
    ```
    npm install
    ```
-3. Server starten:
+3. **Domain (optional) konfigurieren:** In `server.js` oben steht `PUBLIC_URL`.
+   - Standard: `https://geburtstag.felixfab.de`
+   - Oder per Umgebungsvariable: `PUBLIC_URL=https://deine-domain.de npm start`
+   - Soll es **nur im WLAN** laufen, setze `PUBLIC_URL=` (leer) → die WLAN-IP wird automatisch genutzt.
+4. Server starten:
    ```
    npm start
    ```
-4. Im Terminal wird die Adresse angezeigt, z.B. `http://192.168.178.54:3000`.
-5. Diese Adresse im Browser des Organisators öffnen → QR-Code und Steuerung erscheinen.
+5. Im Terminal wird die Adresse angezeigt, z.B. `https://geburtstag.felixfab.de`.
+6. Diese Adresse im Browser des Organisators öffnen → QR-Code und Steuerung erscheinen.
+   Der **QR-Code verlinkt auf die Handy-Seite** (`/display`).
 
-> ⚠️ **Wichtig:** Laptop und alle Handys müssen im **selben WLAN** sein.
-> Die Adresse im Terminal wird automatisch auf die lokale WLAN-IP gesetzt
-> (Tailscale/VPN-Adressen werden ignoriert).
+> ⚠️ **Wichtig (nur im WLAN):** Laptop und alle Handys müssen im **selben WLAN** sein.
+>
+> ⚠️ **Wichtig (mit Domain über Internet):** Deine Domain/Tunnel muss
+> **HTTPS (wss)** UND **WebSockets** unterstützen (z.B. Cloudflare Tunnel tut das).
+> Die Handys öffnen dann `https://geburtstag.felixfab.de/display` und verbinden
+> sich automatisch per `wss://` – auch über das Internet hinweg.
 
 ## Ablauf für die Feier
 
