@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<meta name="theme-color" content="#000000" />
+<title>Happy Birthday 🎂</title>
+<style>
+  * { box-sizing: border-box; margin:0; padding:0; }
+  html, body { height:100%; overflow:hidden; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background:#05030f; color:#fff;
+         display:flex; align-items:center; justify-content:center; }
+  #screen { position:relative; width:100%; height:100%; display:flex; flex-direction:column;
+            align-items:center; justify-content:center; overflow:hidden; }
+
+  /* ---------- Anmelden ---------- */
+  #login { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
+           justify-content:center; gap:18px; padding:24px; text-align:center; z-index:20;
+           background:radial-gradient(circle at 50% 20%, #2a1a4a, #05030f); }
+  #login h1 { font-size:1.5rem; font-weight:700; }
+  #login p { opacity:.75; font-size:.95rem; max-width:300px; }
+  #login input { font-size:1.2rem; padding:14px 18px; border-radius:12px; border:2px solid rgba(255,255,255,.3);
+                 background:rgba(255,255,255,.08); color:#fff; text-align:center; width:80%; max-width:280px; }
+  #login button { font-size:1.1rem; font-weight:700; padding:14px 34px; border:none; border-radius:12px;
+                  background:linear-gradient(135deg,#ff6b6b,#f06595); color:#fff; cursor:pointer; }
+  .ready-tag { font-size:.85rem; opacity:.8; margin-top:8px; min-height:1.2em; }
+
+  /* ---------- Warten ---------- */
+  #wait { position:absolute; inset:0; display:none; flex-direction:column; align-items:center;
+          justify-content:center; gap:14px; z-index:10; text-align:center; padding:20px; }
+  .pulse { width:60px; height:60px; border-radius:50%; border:5px solid rgba(255,255,255,.2);
+           border-top-color:#ffd166; animation:spin 1.2s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  #wait .name { font-size:1.15rem; font-weight:700; }
+  #wait .pos { font-size:.9rem; opacity:.85; }
+
+  /* ---------- Countdown ---------- */
+  #countdown { position:absolute; inset:0; display:none; align-items:center; justify-content:center; z-index:10; }
+  #countdown .num { font-size:min(60vw, 300px); font-weight:900; text-shadow:0 0 40px rgba(255,255,255,.6); }
+  .pop { animation:pop .85s ease; }
+  @keyframes pop { 0%{transform:scale(2.2); opacity:0;} 30%{transform:scale(.9); opacity:1;} 100%{transform:scale(1);} }
+
+  /* ---------- Blitz ---------- */
+  #flash { position:absolute; inset:0; display:none; z-index:5; }
+
+  /* ---------- Effekte / Welle ---------- */
+  #fx { position:absolute; inset:0; display:none; overflow:hidden; z-index:8; }
+  .spark { position:absolute; border-radius:50%; opacity:0; }
+
+  /* ---------- Buchstabe ---------- */
+  #letter { position:absolute; inset:0; display:none; flex-direction:column; align-items:center;
+            justify-content:center; z-index:30; text-align:center; padding:20px; }
+  #letter .ch { font-size:min(46vw, 300px); font-weight:900; line-height:1;
+                text-shadow:0 0 50px rgba(255,215,100,.6); }
+  #letter .ch.in { animation:letterIn 1s cubic-bezier(.2,1.4,.4,1) forwards; transform:scale(0); }
+  @keyframes letterIn { 0%{transform:scale(0) rotate(-20deg); opacity:0;}
+                        70%{transform:scale(1.15) rotate(0); opacity:1;}
+                        100%{transform:scale(1);} }
+  #letter .sub { margin-top:14px; font-size:1rem; opacity:.9; }
+  #confetti { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+
+  /* ---------- Finale ---------- */
+  #finale { position:absolute; inset:0; display:none; flex-direction:column; align-items:center;
+            justify-content:center; z-index:40; gap:12px; text-align:center; padding:20px;
+            background:radial-gradient(circle at 50% 30%, #3a1a5a, #05030f); }
+  #finale h1 { font-size:min(9vw, 40px); font-weight:900; text-shadow:0 0 30px rgba(255,255,255,.5); }
+  #finale p { opacity:.9; font-size:1.05rem; }
+
+  .hidden { display:none !important; }
+</style>
+</head>
+<body>
+<div id="screen">
+
+  <div id="login">
+    <h1>🎂 Happy Birthday!</h1>
+    <p>Gib deinen Namen ein, damit alle wissen, in welcher Reihenfolge die Handys gehalten werden.</p>
+    <input id="nameInput" type="text" placeholder="Dein Name" maxlength="20" autocomplete="off" />
+    <button id="joinBtn">Verbinden</button>
+    <div class="ready-tag" id="readyTag"></div>
+  </div>
+
+  <div id="wait">
+    <div class="pulse"></div>
+    <div class="name" id="waitName">Warte auf den Start…</div>
+    <div class="pos" id="waitPos"></div>
+  </div>
+
+  <div id="countdown"><span class="num" id="cdNum">3</span></div>
+  <div id="flash"></div>
+  <div id="fx"></div>
+
+  <div id="letter">
+    <div id="confetti"></div>
+    <span class="ch" id="letterCh">A</span>
+    <div class="sub" id="letterSub">Happy Birthday!</div>
+  </div>
+
+  <div id="finale">
+    <h1>🎉 Happy Birthday! 🎉</h1>
+    <p id="finaleName"></p>
+  </div>
+
+</div>
+
+<script>
+const ws = new WebSocket(location.origin.replace(/^http/,'ws'));
+const $ = (id) => document.getElementById(id);
+
+// ===== Konfiguration =====
+const MESSAGE = "HAPPY BIRTHDAY"; // 14 Zeichen (inkl. Leerzeichen)
+// Idealfall: genauso viele aktive Geräte wie Zeichen -> jedes Handy 1 Buchstabe.
+
+// ===== Zustand =====
+let myId = localStorage.getItem("mom60_id") || null;
+let myName = localStorage.getItem("mom60_name") || "";
+let myOrder = 0;      // absolute order vom Server
+let myPos = 0;        // Show-Position (Index in sortierter aktiver Liste)
+let displayCount = 0; // Anzahl aktiver Geräte
+let joined = false;
+let registered = false;
+
+// ===== Anmelden =====
+if (myName) $("nameInput").value = myName;
+
+function join() {
+  myName = $("nameInput").value.trim() || "Unbenannt";
+  localStorage.setItem("mom60_name", myName);
+  if (!myId) { myId = "d" + Math.random().toString(36).slice(2,10); localStorage.setItem("mom60_id", myId); }
+  $("readyTag").textContent = "Verbinde…";
+  ws.send(JSON.stringify({ type:"register-display", id:myId, name:myName }));
+  joined = true;
+}
+
+$("joinBtn").onclick = join;
+$("nameInput").addEventListener("keydown", (e)=>{ if(e.key==="Enter") join(); });
+
+// ===== WebSocket =====
+ws.onopen = () => { if (joined) join(); };
+
+ws.onmessage = (e) => {
+  const m = JSON.parse(e.data);
+
+  if (m.type === "registered") {
+    myId = m.id;
+    localStorage.setItem("mom60_id", myId);
+    registered = true;
+    $("login").classList.add("hidden");
+    $("wait").style.display = "flex";
+    $("waitName").textContent = "Hallo " + myName + " – warte auf den Start…";
+    ws.send(JSON.stringify({ type:"sync-request" }));
+  }
+
+  if (m.type === "state") {
+    computePosition(m.displays);
+  }
+
+  if (m.type === "event") handleEvent(m);
+};
+
+// ===== Position berechnen =====
+function computePosition(displays) {
+  // Aktive Geräte nach order sortieren
+  const active = displays
+    .filter(d => d.active !== false)
+    .sort((a,b) => a.order - b.order);
+  displayCount = active.length;
+  const idx = active.findIndex(d => d.id === myId);
+  if (idx >= 0) myPos = idx;
+  $("waitPos").textContent = displayCount > 0
+    ? "Du bist Gerät #" + (idx+1) + " von " + displayCount
+    : "";
+}
+
+// ===== Events =====
+function handleEvent(m) {
+  if (m.type === "pending") {
+    $("waitName").textContent = "Alle bereit – Countdown startet gleich!";
+    // beginSequence wird vom Server nach Timeout gesendet
+  }
+  if (m.type === "sequence") beginSequence(m.payload);
+}
+
+let SEQ = null;
+function beginSequence(p) {
+  SEQ = p;
+  schedule(p.t1,        () => countdown(3));
+  schedule(p.t1 + 1000, () => countdown(2));
+  schedule(p.t1 + 2000, () => countdown(1));
+  schedule(p.t1 + 3000, () => flashAndWave());
+  schedule(p.t2,        () => showLetter());
+  schedule(p.t3,        () => showFinale());
+}
+function schedule(time, fn) { setTimeout(fn, Math.max(0, time - Date.now())); }
+
+// ===== Countdown =====
+function countdown(n) {
+  $("countdown").style.display = "flex";
+  const num = $("cdNum");
+  num.textContent = n;
+  num.classList.remove("pop"); void num.offsetWidth; num.classList.add("pop");
+}
+
+// ===== Blitz + Welle =====
+function flashAndWave() {
+  const fl = $("flash");
+  fl.style.display = "block";
+  fl.style.background = "#ffffff";
+  setTimeout(()=>{ fl.style.background = "#ffd166"; }, 80);
+  setTimeout(()=>{ fl.style.display = "none"; }, 380);
+
+  // Regenbogen-Welle über alle Handys
+  const fx = $("fx");
+  fx.style.display = "block";
+  fx.innerHTML = "";
+  const hueBase = (myPos * 26) % 360;
+  const sparks = [];
+  for (let i=0;i<36;i++){
+    const s = document.createElement("div");
+    s.className = "spark";
+    s.style.left = (Math.random()*100) + "%";
+    s.style.top = (Math.random()*100) + "%";
+    const sz = 6 + Math.random()*18;
+    s.style.width = sz+"px"; s.style.height = sz+"px";
+    fx.appendChild(s);
+    sparks.push(s);
+  }
+  let fi = 0;
+  const wave = setInterval(()=>{
+    const hue = (hueBase + fi*8) % 360;
+    sparks.forEach((s, idx)=>{
+      const phase = ((idx/sparks.length) + fi*0.06) % 1;
+      s.style.opacity = phase < 0.5 ? (phase*2*0.9) : ((1-phase)*2*0.9);
+      s.style.background = "hsl("+hue+",100%,62%)";
+      s.style.transform = "scale(" + (0.5 + phase*1.6) + ")";
+    });
+    fi++;
+  }, 55);
+  const dur = SEQ ? SEQ.t2 - SEQ.t1 - 3000 : 7000;
+  setTimeout(()=>{ clearInterval(wave); fx.style.display="none"; fx.innerHTML=""; }, Math.max(0,dur));
+}
+
+// ===== Buchstabe =====
+function assignContent(position, total) {
+  const chars = MESSAGE.split("");
+  const n = chars.length;
+  if (total >= n) {
+    // genug Geräte: jedes zeigt höchstens 1 Zeichen (bzw. Konfetti-Ecke)
+    return position < n ? chars[position] : "";
+  } else {
+    // weniger Geräte als Zeichen: mehrere Zeichen pro Gerät
+    const chunk = Math.ceil(n / total);
+    let s = "";
+    for (let i=0;i<chunk;i++){
+      const idx = position*chunk + i;
+      if (idx < n) s += chars[idx];
+    }
+    return s;
+  }
+}
+
+function showLetter() {
+  $("countdown").style.display = "none";
+  $("fx").style.display = "none";
+  const total = Math.max(1, displayCount);
+  const content = assignContent(myPos, total);
+  const ch = $("letterCh");
+  ch.textContent = content || "🎉";
+  ch.style.fontSize = content.length > 1 ? "min(24vw, 140px)" : "min(46vw, 300px)";
+  ch.classList.remove("in"); void ch.offsetWidth; ch.classList.add("in");
+  $("letterSub").textContent = "Happy Birthday!";
+  $("letter").style.display = "flex";
+  launchConfetti();
+}
+
+function launchConfetti() {
+  const c = $("confetti");
+  c.innerHTML = "";
+  const style = document.createElement("style");
+  style.textContent = "@keyframes fall{to{transform:translate(var(--dx),110vh) rotate(720deg);}}";
+  document.head.appendChild(style);
+  for (let i=0;i<26;i++){
+    const p = document.createElement("div");
+    p.style.cssText = "position:absolute;left:"+Math.random()*100+"%;top:-12%;width:8px;height:14px;"+
+      "background:hsl("+Math.random()*360+",100%,60%);animation:fall "+(1.6+Math.random()*2)+"s linear forwards;";
+    p.style.setProperty("--dx", (Math.random()*140-70)+"px");
+    c.appendChild(p);
+  }
+}
+
+// ===== Finale =====
+function showFinale() {
+  $("letter").style.display = "none";
+  $("finaleName").textContent = "Happy Birthday, Mama! 🎂";
+  $("finale").style.display = "flex";
+}
+</script>
+</body>
+</html>

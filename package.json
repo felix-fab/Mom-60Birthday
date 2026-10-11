@@ -1,0 +1,15 @@
+{
+  "name": "mom-60-birthday",
+  "version": "1.0.0",
+  "description": "Geburtstags-Flashmob: Mehrere Handys zeigen synchron einen Countdown und dann 'Happy Birthday' Buchstabe für Buchstabe.",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "qrcode": "^1.5.3",
+    "ws": "^8.17.1"
+  }
+}
