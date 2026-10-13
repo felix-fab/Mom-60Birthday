@@ -151,6 +151,25 @@
 const ws = new WebSocket(location.origin.replace(/^http/,'ws'));
 const $ = (id) => document.getElementById(id);
 
+// ===== Bildschirm anlassen (kein Sperrbildschirm, solange die Seite offen ist) =====
+let wakeLock = null;
+async function requestWakeLock() {
+  try {
+    if ("wakeLock" in navigator) {
+      wakeLock = await navigator.wakeLock.request("screen");
+    }
+  } catch (e) {
+    // Nicht unterstützt oder abgelehnt – dann läuft die Seite einfach normal weiter
+  }
+}
+// Beim Öffnen der Seite anfordern
+requestWakeLock();
+// Wenn die Seite wieder sichtbar wird (z.B. vom Home-Bildschirm zurück), neu anfordern,
+// da der Browser den Wake Lock beim Verstecken der Seite automatisch freigibt.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") requestWakeLock();
+});
+
 // ===== Konfiguration =====
 const MESSAGE = "HAPPY BIRTHDAY"; // 14 Zeichen (inkl. Leerzeichen)
 
@@ -161,6 +180,42 @@ let myPos = 0;        // Show-Position (Index in sortierter aktiver Liste)
 let displayCount = 0; // Anzahl aktiver Geräte
 let joined = false;
 let inShow = false;   // true, sobald die Show läuft
+
+// ===== Clock-Synchronisation (damit alle Handys gleichzeitig starten) =====
+let clockOffset = 0;      // geschätzter Unterschied: Server-Zeit - Handy-Zeit
+let bestSync = null;      // { rtt, offset } der besten (schnellsten) Messung
+let pendingSyncSend = null; // clientSend-Timestamp der laufenden Messung
+let syncDone = false;
+
+// Geschätzte aktuelle Server-Zeit
+function serverNow() { return Date.now() + clockOffset; }
+
+// Mehrere RTT-Messungen durchführen, die beste (niedrigste Latenz) übernehmen
+function initClockSync() {
+  syncDone = false;
+  bestSync = null;
+  for (let i = 0; i < 4; i++) {
+    setTimeout(sendSync, i * 120);
+  }
+}
+function sendSync() {
+  const sendT = Date.now();
+  pendingSyncSend = sendT;
+  ws.send(JSON.stringify({ type: "time-sync", clientSend: sendT }));
+}
+function handleTimeSync(m) {
+  if (m.clientSend !== pendingSyncSend) return;
+  const receiveT = Date.now();
+  const rtt = receiveT - m.clientSend;       // Round-Trip-Zeit
+  const oneWay = rtt / 2;                     // geschätzte einfache Latenz
+  const serverNowAtReceive = m.serverTime + oneWay;
+  const offset = serverNowAtReceive - receiveT;
+  if (!bestSync || rtt < bestSync.rtt) bestSync = { rtt, offset };
+  pendingSyncSend = null;
+  // Nach der letzten Messung den besten Offset übernehmen
+  clockOffset = bestSync.offset;
+  syncDone = true;
+}
 
 // ===== Anmelden =====
 if (myName) $("nameInput").value = myName;
@@ -191,6 +246,11 @@ ws.onmessage = (e) => {
     $("wait").style.display = "flex";
     $("waitName").textContent = "Hallo " + myName + " – warte auf den Start…";
     ws.send(JSON.stringify({ type:"sync-request" }));
+    initClockSync(); // Uhr synchronisieren, damit der Countdown überall gleichzeitig startet
+  }
+
+  if (m.type === "time-sync") {
+    handleTimeSync(m);
   }
 
   if (m.type === "state") {
@@ -217,6 +277,9 @@ function computePosition(displays) {
 function handleEvent(m) {
   if (m.event === "pending") {
     $("waitName").textContent = "Alle bereit – Countdown startet gleich!";
+    // Uhr direkt vor dem Countdown nochmal frisch abgleichen,
+    // damit der Start wirklich auf allen Handys gleichzeitig passiert.
+    initClockSync();
   }
   if (m.event === "sequence") beginSequence(m.payload);
 }
@@ -244,7 +307,9 @@ function beginSequence(p) {
   schedule(p.t2, () => startLetterSweep());
   schedule(p.t3, () => showFinale());
 }
-function schedule(time, fn) { setTimeout(fn, Math.max(0, time - Date.now())); }
+// Wichtig für Synchronisation: Verzögerung anhand der SERVER-Zeit berechnen,
+// nicht anhand der (evtl. abweichenden) Handy-Uhr.
+function schedule(time, fn) { setTimeout(fn, Math.max(0, time - serverNow())); }
 
 // ===== Soundeffekte (Web Audio, ohne Dateien) =====
 let audioCtx = null;
@@ -344,7 +409,7 @@ function flashOnce() {
 // Licht wirkt, das über die ganze Handy-Reihe läuft.
 function flyWave(startTime, step) {
   const band = $("lightwave");
-  const delay = Math.max(0, startTime - Date.now());
+  const delay = Math.max(0, startTime - serverNow());
   band.style.display = "block";
   band.style.transition = "none";
   band.style.left = "-60%";
@@ -368,14 +433,16 @@ function assignContent(position) {
 // und bleiben dann stehen (verschwinden nicht mehr bis zum Finale).
 function startLetterSweep() {
   const step = LETTER_STEP;
-  // Wann die Licht-Welle dieses Handy erreicht (von links nach rechts über die Reihe)
-  const myReveal = Date.now() + myPos * step;
+  // Wann die Licht-Welle dieses Handy erreicht (anhand der Server-Zeit, damit
+  // alle Handys exakt gleichzeitig arbeiten)
+  const nowServer = serverNow();
+  const myReveal = nowServer + myPos * step;
   // Licht-Welle über die Reihe laufen lassen
   flyWave(myReveal, step);
   // Buchstabe dieses Handys genau dann einblenden
-  setTimeout(() => showLetter(), Math.max(0, myReveal - Date.now()));
+  setTimeout(() => showLetter(), Math.max(0, myReveal - serverNow()));
   // Fanfare nur auf dem ersten Handy spielen (Position 0)
-  if (myPos === 0) schedule(Date.now(), fanfare);
+  if (myPos === 0) schedule(nowServer, fanfare);
 }
 
 function showLetter() {

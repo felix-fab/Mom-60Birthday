@@ -9,6 +9,7 @@ Eine Website, bei der mehrere Personen ihre Handys nebeneinander halten. Über a
 - Jeder Gast gibt seinen **Namen** ein.
 - Der Organisator sieht alle verbundenen Geräte mit Namen und kann die **Reihenfolge** festlegen (welches Handy zuerst gehalten wird).
 - Per Knopfdruck startet der **Countdown**, dann die **Animationen** und schließlich **„HAPPY BIRTHDAY"** – verteilt über alle Handys.
+- Der Bildschirm der Handys bleibt **automatisch an** (Screen Wake Lock), solange die Seite offen ist – kein Sperrbildschirm nötig.
 - Alles läuft über einen kleinen Server **im WLAN** und ist dadurch perfekt synchron.
 
 ## Starten

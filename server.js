@@ -131,6 +131,15 @@ function handleMessage(ws, msg) {
     case "sync-request":
       ws.send(JSON.stringify({ type: "state", displays: stateList() }));
       break;
+
+    case "time-sync":
+      // Für die Clock-Synchronisation der Geräte: RTT messen
+      ws.send(JSON.stringify({
+        type: "time-sync",
+        clientSend: msg.clientSend,
+        serverTime: Date.now(),
+      }));
+      break;
   }
 }
 
