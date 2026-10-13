@@ -11,60 +11,98 @@
   body { font-family: 'Segoe UI', system-ui, sans-serif; background:#05030f; color:#fff;
          display:flex; align-items:center; justify-content:center; }
   #screen { position:relative; width:100%; height:100%; display:flex; flex-direction:column;
-            align-items:center; justify-content:center; overflow:hidden; }
+            align-items:center; justify-content:center; overflow:hidden;
+            background:radial-gradient(circle at 50% 20%, #1c1140, #05030f 70%); }
+  /* langsam wechselnde Hintergrund-Farben */
+  #screen.bg-anim { animation:bgShift 9s ease-in-out infinite; }
+  @keyframes bgShift {
+    0%,100% { background:radial-gradient(circle at 50% 20%, #1c1140, #05030f 70%); }
+    50%     { background:radial-gradient(circle at 50% 30%, #3a1550, #0a0416 70%); }
+  }
 
   /* ---------- Anmelden ---------- */
   #login { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
-           justify-content:center; gap:18px; padding:24px; text-align:center; z-index:20;
-           background:radial-gradient(circle at 50% 20%, #2a1a4a, #05030f); }
+           justify-content:center; gap:18px; padding:24px; text-align:center; z-index:20; }
   #login h1 { font-size:1.5rem; font-weight:700; }
   #login p { opacity:.75; font-size:.95rem; max-width:300px; }
   #login input { font-size:1.2rem; padding:14px 18px; border-radius:12px; border:2px solid rgba(255,255,255,.3);
                  background:rgba(255,255,255,.08); color:#fff; text-align:center; width:80%; max-width:280px; }
   #login button { font-size:1.1rem; font-weight:700; padding:14px 34px; border:none; border-radius:12px;
-                  background:linear-gradient(135deg,#ff6b6b,#f06595); color:#fff; cursor:pointer; }
+                  background:linear-gradient(135deg,#ff6b6b,#f06595); color:#fff; cursor:pointer;
+                  box-shadow:0 8px 24px rgba(240,101,149,.4); }
+  #login button:active { transform:scale(.96); }
   .ready-tag { font-size:.85rem; opacity:.8; margin-top:8px; min-height:1.2em; }
 
   /* ---------- Warten ---------- */
   #wait { position:absolute; inset:0; display:none; flex-direction:column; align-items:center;
-          justify-content:center; gap:14px; z-index:10; text-align:center; padding:20px; }
-  .pulse { width:60px; height:60px; border-radius:50%; border:5px solid rgba(255,255,255,.2);
-           border-top-color:#ffd166; animation:spin 1.2s linear infinite; }
+          justify-content:center; gap:22px; z-index:10; text-align:center; padding:20px; }
+  .ringwrap { position:relative; width:110px; height:110px; }
+  .ringwrap .ring { position:absolute; inset:0; border-radius:50%; }
+  .ringwrap .ring.bg { border:4px solid rgba(255,255,255,.12); }
+  .ringwrap .ring.spin { border:4px solid transparent; border-top-color:#ffd166; border-right-color:#f06595;
+                         animation:spin 1s linear infinite; }
   @keyframes spin { to { transform:rotate(360deg); } }
-  #wait .name { font-size:1.15rem; font-weight:700; }
+  .ringwrap .heart { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+                     font-size:2.2rem; animation:beat 1.2s ease-in-out infinite; }
+  @keyframes beat { 0%,100%{transform:scale(1);} 30%{transform:scale(1.18);} }
+  #wait .name { font-size:1.25rem; font-weight:700; text-shadow:0 2px 20px rgba(255,209,102,.3); }
   #wait .pos { font-size:.9rem; opacity:.85; }
+  #wait.fade-out { opacity:0; transition:opacity .45s ease; }
 
   /* ---------- Countdown ---------- */
-  #countdown { position:absolute; inset:0; display:none; align-items:center; justify-content:center; z-index:10; }
-  #countdown .num { font-size:min(60vw, 300px); font-weight:900; text-shadow:0 0 40px rgba(255,255,255,.6); }
-  .pop { animation:pop .85s ease; }
-  @keyframes pop { 0%{transform:scale(2.2); opacity:0;} 30%{transform:scale(.9); opacity:1;} 100%{transform:scale(1);} }
+  #countdown { position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+               z-index:10; }
+  #countdown .cdwrap { position:relative; display:flex; align-items:center; justify-content:center;
+                       width:min(70vw,320px); height:min(70vw,320px); }
+  #countdown .cdring { position:absolute; inset:0; border-radius:50%;
+                       background:conic-gradient(#ff6b6b, #f06595, #ffd166, #ff6b6b);
+                       filter:blur(2px); opacity:.9; }
+  #countdown .cdinner { position:absolute; inset:8px; border-radius:50%;
+                        background:radial-gradient(circle at 50% 35%, #2a1a4a, #05030f);
+                        display:flex; align-items:center; justify-content:center; }
+  #countdown .num { font-size:min(34vw, 180px); font-weight:900; line-height:1;
+                    background:linear-gradient(180deg,#fff,#ffd166);
+                    -webkit-background-clip:text; background-clip:text; color:transparent;
+                    filter:drop-shadow(0 0 24px rgba(255,209,102,.55)); }
+  .pop { animation:pop .9s cubic-bezier(.2,1.4,.4,1); }
+  @keyframes pop { 0%{transform:scale(2.4) rotate(-6deg); opacity:0;}
+                   35%{transform:scale(.9) rotate(2deg); opacity:1;}
+                   100%{transform:scale(1) rotate(0);} }
 
   /* ---------- Blitz ---------- */
   #flash { position:absolute; inset:0; display:none; z-index:5; }
 
   /* ---------- Effekte / Welle ---------- */
   #fx { position:absolute; inset:0; display:none; overflow:hidden; z-index:8; }
-  .spark { position:absolute; border-radius:50%; opacity:0; }
+  #fx .sweep { position:absolute; inset:-20%; opacity:.9; }
+  #fx .spark { position:absolute; border-radius:50%; opacity:0; }
+
+  /* ---------- Fliegender Licht-Wellen-Band (von Handy zu Handy) ---------- */
+  #lightwave { position:absolute; top:0; bottom:0; width:55vw; display:none;
+               background:linear-gradient(90deg, transparent, rgba(255,209,102,.0) 0%,
+                 rgba(255,209,102,.55) 30%, rgba(255,107,107,.8) 50%,
+                 rgba(255,209,102,.55) 70%, rgba(255,209,102,0) 100%);
+               box-shadow:0 0 60px 20px rgba(255,209,102,.4);
+               pointer-events:none; z-index:7; }
 
   /* ---------- Buchstabe ---------- */
   #letter { position:absolute; inset:0; display:none; flex-direction:column; align-items:center;
-            justify-content:center; z-index:30; text-align:center; padding:20px; }
-  #letter .ch { font-size:min(46vw, 300px); font-weight:900; line-height:1;
-                text-shadow:0 0 50px rgba(255,215,100,.6); }
+            justify-content:center; z-index:30; text-align:center; padding:8px; }
+  #letter .ch { font-size:min(94vw, 80vh); font-weight:900; line-height:1;
+                background:linear-gradient(180deg,#fff 10%, #ffd166 55%, #ff6b6b);
+                -webkit-background-clip:text; background-clip:text; color:transparent;
+                filter:drop-shadow(0 0 30px rgba(255,215,100,.8));
+                letter-spacing:-.02em; }
   #letter .ch.in { animation:letterIn 1s cubic-bezier(.2,1.4,.4,1) forwards; transform:scale(0); }
-  @keyframes letterIn { 0%{transform:scale(0) rotate(-20deg); opacity:0;}
-                        70%{transform:scale(1.15) rotate(0); opacity:1;}
-                        100%{transform:scale(1);} }
-  #letter .sub { margin-top:14px; font-size:1rem; opacity:.9; }
+  @keyframes letterIn { 0%{transform:scale(0) rotate(-30deg); opacity:0;}
+                        60%{transform:scale(1.25) rotate(4deg); opacity:1;}
+                        80%{transform:scale(.96) rotate(-2deg);}
+                        100%{transform:scale(1) rotate(0);} }
   #confetti { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
 
-  /* ---------- Finale ---------- */
-  #finale { position:absolute; inset:0; display:none; flex-direction:column; align-items:center;
-            justify-content:center; z-index:40; gap:12px; text-align:center; padding:20px;
-            background:radial-gradient(circle at 50% 30%, #3a1a5a, #05030f); }
-  #finale h1 { font-size:min(9vw, 40px); font-weight:900; text-shadow:0 0 30px rgba(255,255,255,.5); }
-  #finale p { opacity:.9; font-size:1.05rem; }
+  /* ---------- Finale (nur Konfetti, kein Text – Buchstabe bleibt stehen) ---------- */
+  #finale { position:absolute; inset:0; display:none; z-index:40;
+            pointer-events:none; }
 
   .hidden { display:none !important; }
 </style>
@@ -81,24 +119,30 @@
   </div>
 
   <div id="wait">
-    <div class="pulse"></div>
+    <div class="ringwrap">
+      <div class="ring bg"></div>
+      <div class="ring spin"></div>
+      <div class="heart">💜</div>
+    </div>
     <div class="name" id="waitName">Warte auf den Start…</div>
     <div class="pos" id="waitPos"></div>
   </div>
 
-  <div id="countdown"><span class="num" id="cdNum">3</span></div>
+  <div id="countdown"><div class="cdwrap">
+      <div class="cdring"></div>
+      <div class="cdinner"><span class="num" id="cdNum">3</span></div>
+  </div></div>
   <div id="flash"></div>
-  <div id="fx"></div>
+  <div id="fx"><div class="sweep" id="sweep"></div></div>
+  <div id="lightwave"></div>
 
   <div id="letter">
     <div id="confetti"></div>
     <span class="ch" id="letterCh">A</span>
-    <div class="sub" id="letterSub">Happy Birthday!</div>
   </div>
 
   <div id="finale">
-    <h1>🎉 Happy Birthday! 🎉</h1>
-    <p id="finaleName"></p>
+    <div id="confettiFinale"></div>
   </div>
 
 </div>
@@ -109,16 +153,14 @@ const $ = (id) => document.getElementById(id);
 
 // ===== Konfiguration =====
 const MESSAGE = "HAPPY BIRTHDAY"; // 14 Zeichen (inkl. Leerzeichen)
-// Idealfall: genauso viele aktive Geräte wie Zeichen -> jedes Handy 1 Buchstabe.
 
 // ===== Zustand =====
 let myId = localStorage.getItem("mom60_id") || null;
 let myName = localStorage.getItem("mom60_name") || "";
-let myOrder = 0;      // absolute order vom Server
 let myPos = 0;        // Show-Position (Index in sortierter aktiver Liste)
 let displayCount = 0; // Anzahl aktiver Geräte
 let joined = false;
-let registered = false;
+let inShow = false;   // true, sobald die Show läuft
 
 // ===== Anmelden =====
 if (myName) $("nameInput").value = myName;
@@ -127,6 +169,7 @@ function join() {
   myName = $("nameInput").value.trim() || "Unbenannt";
   localStorage.setItem("mom60_name", myName);
   if (!myId) { myId = "d" + Math.random().toString(36).slice(2,10); localStorage.setItem("mom60_id", myId); }
+  initAudio(); // Audio durch den Nutzer-Klick freischalten
   $("readyTag").textContent = "Verbinde…";
   ws.send(JSON.stringify({ type:"register-display", id:myId, name:myName }));
   joined = true;
@@ -144,7 +187,6 @@ ws.onmessage = (e) => {
   if (m.type === "registered") {
     myId = m.id;
     localStorage.setItem("mom60_id", myId);
-    registered = true;
     $("login").classList.add("hidden");
     $("wait").style.display = "flex";
     $("waitName").textContent = "Hallo " + myName + " – warte auf den Start…";
@@ -160,7 +202,6 @@ ws.onmessage = (e) => {
 
 // ===== Position berechnen =====
 function computePosition(displays) {
-  // Aktive Geräte nach order sortieren
   const active = displays
     .filter(d => d.active !== false)
     .sort((a,b) => a.order - b.order);
@@ -174,126 +215,214 @@ function computePosition(displays) {
 
 // ===== Events =====
 function handleEvent(m) {
-  if (m.type === "pending") {
+  if (m.event === "pending") {
     $("waitName").textContent = "Alle bereit – Countdown startet gleich!";
-    // beginSequence wird vom Server nach Timeout gesendet
   }
-  if (m.type === "sequence") beginSequence(m.payload);
+  if (m.event === "sequence") beginSequence(m.payload);
 }
 
 let SEQ = null;
+const COUNT_START = 10;      // Countdown von 10 abwärts
+const LETTER_STEP = 400;     // Zeit (ms), die der Buchstaben-Durchlauf pro Handy braucht
+
 function beginSequence(p) {
   SEQ = p;
-  schedule(p.t1,        () => countdown(3));
-  schedule(p.t1 + 1000, () => countdown(2));
-  schedule(p.t1 + 2000, () => countdown(1));
-  schedule(p.t1 + 3000, () => flashAndWave());
-  schedule(p.t2,        () => showLetter());
-  schedule(p.t3,        () => showFinale());
+  inShow = true;
+  $("screen").classList.add("bg-anim");
+  hideWait();
+  // Countdown von 10 nach 1 – mit Tick-Sound und Welle über alle Handys
+  for (let i = 0; i < COUNT_START; i++) {
+    const n = COUNT_START - i;
+    schedule(p.t1 + i * 1000, () => { countdown(n); tickSound(n); });
+  }
+  // Welle läuft WÄHREND des Countdowns über alle Handys (ein Durchgang pro Sekunde)
+  countdownWave(p.t1);
+  // Kurzer Blitz direkt nach dem Countdown, dann sofort Happy Birthday
+  schedule(p.t1 + COUNT_START * 1000, () => flashOnce());
+  // Buchstaben: kommen direkt nach dem Countdown, wandern von links nach rechts
+  // über alle Handys und bleiben dann die ganze Zeit stehen
+  schedule(p.t2, () => startLetterSweep());
+  schedule(p.t3, () => showFinale());
 }
 function schedule(time, fn) { setTimeout(fn, Math.max(0, time - Date.now())); }
 
+// ===== Soundeffekte (Web Audio, ohne Dateien) =====
+let audioCtx = null;
+function initAudio() {
+  if (!audioCtx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) audioCtx = new AC();
+  }
+  if (audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+}
+// Ein einzelner Ton
+function tone(freq, dur, type, when, vol) {
+  if (!audioCtx) return;
+  const t = audioCtx.currentTime + (when || 0);
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type || "sine";
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(vol || 0.3, t + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  osc.start(t); osc.stop(t + dur + 0.02);
+}
+// Tick bei jeder Countdown-Zahl; die "1" klingt besonders
+function tickSound(n) {
+  if (n > 1) tone(700, 0.09, "square", 0, 0.18);
+  else {
+    tone(880, 0.12, "square", 0, 0.22);
+    tone(1174, 0.16, "square", 0.12, 0.22);
+  }
+}
+// Fanfare, wenn die Buchstaben erscheinen
+function fanfare() {
+  const notes = [523, 659, 784, 1046, 1318];
+  notes.forEach((f, i) => tone(f, 0.22, "triangle", i * 0.11, 0.28));
+  tone(1568, 0.5, "triangle", notes.length * 0.11, 0.28);
+}
+// Festlicher Schlussakkord
+function celebration() {
+  tone(523, 0.6, "triangle", 0, 0.3);
+  tone(659, 0.6, "triangle", 0.02, 0.3);
+  tone(784, 0.6, "triangle", 0.04, 0.3);
+  tone(1046, 1.1, "triangle", 0.1, 0.32);
+}
+
+// ===== Welle über alle Handys WÄHREND des Countdowns =====
+// Ein leuchtender Licht-Band wandert pro Sekunde einmal von links nach rechts
+// über die ganze Handy-Reihe. Jedes Handy startet zeitlich exakt versetzt,
+// sodass es wie EIN durchgehendes Licht wirkt.
+function countdownWave(t1) {
+  const N = Math.max(1, displayCount);
+  const bandDur = 1000 / N; // Zeit, die das Band pro Handy braucht
+  for (let i = 0; i < COUNT_START; i++) {
+    schedule(t1 + i * 1000 + myPos * bandDur, () => sweepBand(bandDur));
+  }
+}
+function sweepBand(bandDur) {
+  const band = $("lightwave");
+  band.style.display = "block";
+  band.style.transition = "none";
+  band.style.left = "-60%";
+  void band.offsetWidth;
+  band.style.transition = "left " + bandDur + "ms linear";
+  band.style.left = "100%";
+}
+
+// "Warten"-Screen sauber ausblenden
+function hideWait() {
+  const w = $("wait");
+  w.classList.add("fade-out");
+  setTimeout(() => { if (!inShow) return; w.style.display = "none"; w.classList.remove("fade-out"); }, 480);
+}
+
 // ===== Countdown =====
 function countdown(n) {
+  hideWait();
   $("countdown").style.display = "flex";
   const num = $("cdNum");
   num.textContent = n;
   num.classList.remove("pop"); void num.offsetWidth; num.classList.add("pop");
 }
 
-// ===== Blitz + Welle =====
-function flashAndWave() {
+// ===== Kurzer Blitz direkt nach dem Countdown =====
+function flashOnce() {
   const fl = $("flash");
   fl.style.display = "block";
   fl.style.background = "#ffffff";
-  setTimeout(()=>{ fl.style.background = "#ffd166"; }, 80);
-  setTimeout(()=>{ fl.style.display = "none"; }, 380);
+  setTimeout(()=>{ fl.style.background = "#ffe9a8"; }, 70);
+  setTimeout(()=>{ fl.style.background = "#ffffff"; }, 140);
+  setTimeout(()=>{ fl.style.display = "none"; }, 320);
+}
 
-  // Regenbogen-Welle über alle Handys
-  const fx = $("fx");
-  fx.style.display = "block";
-  fx.innerHTML = "";
-  const hueBase = (myPos * 26) % 360;
-  const sparks = [];
-  for (let i=0;i<36;i++){
-    const s = document.createElement("div");
-    s.className = "spark";
-    s.style.left = (Math.random()*100) + "%";
-    s.style.top = (Math.random()*100) + "%";
-    const sz = 6 + Math.random()*18;
-    s.style.width = sz+"px"; s.style.height = sz+"px";
-    fx.appendChild(s);
-    sparks.push(s);
-  }
-  let fi = 0;
-  const wave = setInterval(()=>{
-    const hue = (hueBase + fi*8) % 360;
-    sparks.forEach((s, idx)=>{
-      const phase = ((idx/sparks.length) + fi*0.06) % 1;
-      s.style.opacity = phase < 0.5 ? (phase*2*0.9) : ((1-phase)*2*0.9);
-      s.style.background = "hsl("+hue+",100%,62%)";
-      s.style.transform = "scale(" + (0.5 + phase*1.6) + ")";
-    });
-    fi++;
-  }, 55);
-  const dur = SEQ ? SEQ.t2 - SEQ.t1 - 3000 : 7000;
-  setTimeout(()=>{ clearInterval(wave); fx.style.display="none"; fx.innerHTML=""; }, Math.max(0,dur));
+// ===== Licht-Welle (von einem Handy zum nächsten) =====
+// Jedes Handy lässt das Licht-Band in seiner Position von links nach rechts
+// wandern. Der Start ist zeitlich exakt versetzt, sodass es wie EIN durchgehendes
+// Licht wirkt, das über die ganze Handy-Reihe läuft.
+function flyWave(startTime, step) {
+  const band = $("lightwave");
+  const delay = Math.max(0, startTime - Date.now());
+  band.style.display = "block";
+  band.style.transition = "none";
+  band.style.left = "-60%";
+  void band.offsetWidth;
+  band.style.transition = "left " + step + "ms linear";
+  setTimeout(() => {
+    band.style.left = "100%";
+  }, delay);
 }
 
 // ===== Buchstabe =====
-function assignContent(position, total) {
+// Jedes Handy zeigt GENAU EINEN Buchstaben, sodass alle zusammen
+// "HAPPY BIRTHDAY" ergeben (jedes Handy = 1 Zeichen). Position myPos = Index im Text.
+// Bei mehr Handys als Zeichen zeigen die übrigen Handys 🎉.
+function assignContent(position) {
   const chars = MESSAGE.split("");
-  const n = chars.length;
-  if (total >= n) {
-    // genug Geräte: jedes zeigt höchstens 1 Zeichen (bzw. Konfetti-Ecke)
-    return position < n ? chars[position] : "";
-  } else {
-    // weniger Geräte als Zeichen: mehrere Zeichen pro Gerät
-    const chunk = Math.ceil(n / total);
-    let s = "";
-    for (let i=0;i<chunk;i++){
-      const idx = position*chunk + i;
-      if (idx < n) s += chars[idx];
-    }
-    return s;
-  }
+  return position < chars.length ? chars[position] : "";
+}
+
+// Buchstaben erscheinen von links nach rechts über die ganze Handy-Reihe
+// und bleiben dann stehen (verschwinden nicht mehr bis zum Finale).
+function startLetterSweep() {
+  const step = LETTER_STEP;
+  // Wann die Licht-Welle dieses Handy erreicht (von links nach rechts über die Reihe)
+  const myReveal = Date.now() + myPos * step;
+  // Licht-Welle über die Reihe laufen lassen
+  flyWave(myReveal, step);
+  // Buchstabe dieses Handys genau dann einblenden
+  setTimeout(() => showLetter(), Math.max(0, myReveal - Date.now()));
+  // Fanfare nur auf dem ersten Handy spielen (Position 0)
+  if (myPos === 0) schedule(Date.now(), fanfare);
 }
 
 function showLetter() {
   $("countdown").style.display = "none";
   $("fx").style.display = "none";
-  const total = Math.max(1, displayCount);
-  const content = assignContent(myPos, total);
+  $("lightwave").style.display = "none";
+  const content = assignContent(myPos);
   const ch = $("letterCh");
   ch.textContent = content || "🎉";
-  ch.style.fontSize = content.length > 1 ? "min(24vw, 140px)" : "min(46vw, 300px)";
   ch.classList.remove("in"); void ch.offsetWidth; ch.classList.add("in");
-  $("letterSub").textContent = "Happy Birthday!";
   $("letter").style.display = "flex";
-  launchConfetti();
 }
 
-function launchConfetti() {
-  const c = $("confetti");
+function launchConfetti(containerId) {
+  const c = $(containerId || "confetti");
   c.innerHTML = "";
   const style = document.createElement("style");
-  style.textContent = "@keyframes fall{to{transform:translate(var(--dx),110vh) rotate(720deg);}}";
+  style.textContent = "@keyframes fall{to{transform:translate(var(--dx),112vh) rotate(720deg);}}";
+  style.id = "confettiStyle";
+  const old = document.getElementById("confettiStyle"); if (old) old.remove();
   document.head.appendChild(style);
-  for (let i=0;i<26;i++){
+  const colors = ["#ff6b6b","#f06595","#ffd166","#6bcbff","#7dff8a","#c084fc"];
+  for (let i=0;i<60;i++){
     const p = document.createElement("div");
-    p.style.cssText = "position:absolute;left:"+Math.random()*100+"%;top:-12%;width:8px;height:14px;"+
-      "background:hsl("+Math.random()*360+",100%,60%);animation:fall "+(1.6+Math.random()*2)+"s linear forwards;";
-    p.style.setProperty("--dx", (Math.random()*140-70)+"px");
+    const w = 6 + Math.random()*8;
+    p.style.cssText = "position:absolute;left:"+Math.random()*100+"%;top:-12%;width:"+w+"px;"+
+      "height:"+(w*1.6)+"px;border-radius:2px;"+
+      "background:"+colors[i%colors.length]+";"+
+      "animation:fall "+(1.8+Math.random()*2.2)+"s linear "+(Math.random()*0.6)+"s forwards;";
+    p.style.setProperty("--dx", (Math.random()*160-80)+"px");
     c.appendChild(p);
   }
 }
 
-// ===== Finale =====
+// ===== Finale (Konfetti über dem stehenbleibenden Buchstaben) =====
 function showFinale() {
-  $("letter").style.display = "none";
-  $("finaleName").textContent = "Happy Birthday, Mama! 🎂";
-  $("finale").style.display = "flex";
+  // Buchstabe bleibt die ganze Zeit sichtbar – nur Konfetti kommt dazu
+  $("countdown").style.display = "none";
+  $("fx").style.display = "none";
+  $("lightwave").style.display = "none";
+  $("finale").style.display = "block";
+  launchConfetti("confettiFinale");
+  celebration();
 }
 </script>
+<style>
+@keyframes twinkle { 0%,100%{opacity:.2; transform:scale(.6);} 50%{opacity:1; transform:scale(1.2);} }
+</style>
 </body>
 </html>

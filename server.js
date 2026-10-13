@@ -67,7 +67,7 @@ function handleMessage(ws, msg) {
       ws.send(JSON.stringify({ type: "registered", id: ws.deviceId }));
       // Falls ein Event gerade läuft, direkt nachreichen (z.B. Seite neu geladen)
       if (activeEvent) {
-        ws.send(JSON.stringify({ type: "event", ...activeEvent }));
+        ws.send(JSON.stringify(eventMessage()));
       }
       broadcastState();
       break;
@@ -114,7 +114,7 @@ function handleMessage(ws, msg) {
     case "start":
       // Organisator startet das Event mit Timeout, damit alle bereit sind
       activeEvent = { type: "pending", payload: { timeout: 4000 } };
-      broadcast({ type: "event", ...activeEvent });
+      broadcastEvent();
       setTimeout(() => {
         if (activeEvent && activeEvent.type === "pending") {
           beginSequence();
@@ -138,10 +138,23 @@ function beginSequence() {
   const t0 = Date.now();
   const seq = {
     type: "sequence",
-    payload: { t0, t1: t0 + 5000, t2: t0 + 11000, t3: t0 + 17000 },
+    // t1: Countdown startet bei 10 (10 Sekunden, 1 pro Sekunde)
+    // t2: Buchstaben ("Happy Birthday") direkt nach dem Countdown
+    // t3: Feier (Konfetti) über den stehenbleibenden Buchstaben
+    payload: { t0, t1: t0 + 1000, t2: t0 + 11500, t3: t0 + 17000 },
   };
   activeEvent = seq;
-  broadcast({ type: "event", ...seq });
+  broadcastEvent();
+}
+
+// Event als Nachricht an die Geräte: wrapper mit eindeutigem Typ "event"
+// und dem eigentlichen Event-Typ als Feld "event" (statt ihn zu überschreiben).
+function eventMessage() {
+  return { type: "event", event: activeEvent.type, payload: activeEvent.payload };
+}
+
+function broadcastEvent() {
+  broadcast(eventMessage());
 }
 
 function stateList() {
@@ -348,7 +361,7 @@ document.getElementById("btnOrder").onclick = () => {
 }
 
 // ---------- Start ----------
-const PORT = process.env.PORT || 3005;
+const PORT = process.env.PORT || 3010;
 server.listen(PORT, () => {
   const ctrl = PUBLIC_URL || displayUrl();
   console.log("🎉 Geburtstags-Show läuft auf " + PUBLIC_URL);

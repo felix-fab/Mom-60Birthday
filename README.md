@@ -46,15 +46,18 @@ Eine Website, bei der mehrere Personen ihre Handys nebeneinander halten. Über a
 4. **Aufstellen:** Alle stellen sich mit ihrem Handy in der angezeigten Reihenfolge auf
    (die Handys zeigen nach vorn zum Publikum / zur Mama).
 5. **Show starten:** „Countdown & Show starten" drücken.
-   - Alle Handys zählen synchron 3… 2… 1…
-   - Dann läuft eine **Regenbogen-Welle** mit Blitz über alle Handys.
-   - Dann erscheint **„HAPPY BIRTHDAY"** – jedes Handy zeigt einen Buchstaben.
-   - Zum Schluss ein großes Finale mit Konfetti.
+   - Alle Handys zählen synchron von **10 nach 1** (mit Tick-Tönen). Dabei läuft
+     bereits eine **Licht-Welle** von links nach rechts über die ganze Handy-Reihe.
+   - **Direkt** nach dem Countdown erscheint „HAPPY BIRTHDAY" – jedes Handy zeigt genau
+     **einen großen Buchstaben** über den ganzen Bildschirm, nacheinander von links
+     nach rechts aufleuchtend (mit Fanfare). **Nur die Buchstaben** sind zu sehen.
+   - Die Buchstaben **bleiben die ganze Zeit stehen** – zum Schluss kommt noch
+     **Konfetti und Sound** dazu.
 
 > 💡 **Idealfall:** Genau **14 Geräte** ergeben das perfekte „HAPPY BIRTHDAY"
-> (jedes Handy = 1 Buchstabe, inkl. Leerzeichen). Bei weniger Geräten werden
-> mehrere Buchstaben pro Handy zusammengelegt, bei mehr Geräten wiederholt sich
-> der Text bzw. einige Handys zeigen 🎉.
+> (jedes Handy = 1 Buchstabe, inkl. Leerzeichen). Jedes Handy zeigt immer nur
+> **einen** Buchstaben – bei mehr als 14 Geräten zeigen die zusätzlichen Handys 🎉,
+> bei weniger Geräten fehlen die hinteren Buchstaben.
 
 ## Dateien
 
