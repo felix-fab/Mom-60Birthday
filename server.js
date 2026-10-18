@@ -247,7 +247,20 @@ function controlHtml(qr, displayUrl, controlUrl) {
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="theme-color" content="#1a1030" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<link rel="manifest" href="/manifest.json" />
+<link rel="apple-touch-icon" href="/icons/icon-192.png" />
 <title>🎂 60. Geburtstag – Steuerung</title>
+<script>
+// Service Worker registrieren (für Installation als App + Offline)
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
+</script>
 <style>
   * { box-sizing: border-box; }
   body { margin:0; font-family: 'Segoe UI', system-ui, sans-serif; background:#1a1030; color:#fff;

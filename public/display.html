@@ -3,8 +3,22 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-<meta name="theme-color" content="#000000" />
+<meta name="theme-color" content="#05030f" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Happy Birthday" />
+<link rel="manifest" href="/manifest.json" />
+<link rel="apple-touch-icon" href="/icons/icon-192.png" />
 <title>Happy Birthday 🎂</title>
+<script>
+// Service Worker registrieren (für Installation als App + Offline)
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
+</script>
 <style>
   * { box-sizing: border-box; margin:0; padding:0; }
   html, body { height:100%; overflow:hidden; }
@@ -13,12 +27,14 @@
   #screen { position:relative; width:100%; height:100%; display:flex; flex-direction:column;
             align-items:center; justify-content:center; overflow:hidden;
             background:radial-gradient(circle at 50% 20%, #1c1140, #05030f 70%); }
-  /* langsam wechselnde Hintergrund-Farben */
-  #screen.bg-anim { animation:bgShift 9s ease-in-out infinite; }
-  @keyframes bgShift {
-    0%,100% { background:radial-gradient(circle at 50% 20%, #1c1140, #05030f 70%); }
-    50%     { background:radial-gradient(circle at 50% 30%, #3a1550, #0a0416 70%); }
-  }
+  /* Leichtgewichtiger, pulsierender Farb-Glow über dem Hintergrund.
+     Nur opacity wird animiert (GPU-beschleunigt & flüssig), NICHT background –
+     das Animieren von Gradienten ist teuer und ruckelt. */
+  #bgGlow { position:absolute; inset:-20%; pointer-events:none; z-index:1;
+            background:radial-gradient(circle at 50% 35%, rgba(58,21,80,.65), transparent 70%);
+            opacity:.35; }
+  #screen.bg-anim #bgGlow { animation:bgPulse 8s ease-in-out infinite; }
+  @keyframes bgPulse { 0%,100%{opacity:.28;} 50%{opacity:.6;} }
 
   /* ---------- Anmelden ---------- */
   #login { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
@@ -72,18 +88,15 @@
   /* ---------- Blitz ---------- */
   #flash { position:absolute; inset:0; display:none; z-index:5; }
 
-  /* ---------- Effekte / Welle ---------- */
-  #fx { position:absolute; inset:0; display:none; overflow:hidden; z-index:8; }
-  #fx .sweep { position:absolute; inset:-20%; opacity:.9; }
-  #fx .spark { position:absolute; border-radius:50%; opacity:0; }
+  /* ---------- Hochauflösendes Canvas für alle Animationseffekte ---------- */
+  #waveCanvas { position:absolute; inset:0; width:100%; height:100%; display:block;
+                pointer-events:none; z-index:8; }
 
-  /* ---------- Fliegender Licht-Wellen-Band (von Handy zu Handy) ---------- */
-  #lightwave { position:absolute; top:0; bottom:0; width:55vw; display:none;
-               background:linear-gradient(90deg, transparent, rgba(255,209,102,.0) 0%,
-                 rgba(255,209,102,.55) 30%, rgba(255,107,107,.8) 50%,
-                 rgba(255,209,102,.55) 70%, rgba(255,209,102,0) 100%);
-               box-shadow:0 0 60px 20px rgba(255,209,102,.4);
-               pointer-events:none; z-index:7; }
+  /* Sanfter Glow hinter den Buchstaben */
+  #letterGlow { position:absolute; inset:0; display:none; pointer-events:none; z-index:6;
+                background:radial-gradient(circle at 50% 55%, rgba(255,209,102,.28), rgba(240,101,149,.14) 45%, transparent 72%);
+                animation:glowPulse 3.2s ease-in-out infinite; }
+  @keyframes glowPulse { 0%,100%{opacity:.6; transform:scale(1);} 50%{opacity:1; transform:scale(1.06);} }
 
   /* ---------- Buchstabe ---------- */
   #letter { position:absolute; inset:0; display:none; flex-direction:column; align-items:center;
@@ -98,17 +111,13 @@
                         60%{transform:scale(1.25) rotate(4deg); opacity:1;}
                         80%{transform:scale(.96) rotate(-2deg);}
                         100%{transform:scale(1) rotate(0);} }
-  #confetti { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
-
-  /* ---------- Finale (nur Konfetti, kein Text – Buchstabe bleibt stehen) ---------- */
-  #finale { position:absolute; inset:0; display:none; z-index:40;
-            pointer-events:none; }
 
   .hidden { display:none !important; }
 </style>
 </head>
 <body>
 <div id="screen">
+  <div id="bgGlow"></div>
 
   <div id="login">
     <h1>🎂 Happy Birthday!</h1>
@@ -130,19 +139,14 @@
 
   <div id="countdown"><div class="cdwrap">
       <div class="cdring"></div>
-      <div class="cdinner"><span class="num" id="cdNum">3</span></div>
+      <div class="cdinner"><span class="num" id="cdNum">10</span></div>
   </div></div>
   <div id="flash"></div>
-  <div id="fx"><div class="sweep" id="sweep"></div></div>
-  <div id="lightwave"></div>
+  <canvas id="waveCanvas"></canvas>
+  <div id="letterGlow"></div>
 
   <div id="letter">
-    <div id="confetti"></div>
     <span class="ch" id="letterCh">A</span>
-  </div>
-
-  <div id="finale">
-    <div id="confettiFinale"></div>
   </div>
 
 </div>
@@ -298,8 +302,9 @@ function beginSequence(p) {
     const n = COUNT_START - i;
     schedule(p.t1 + i * 1000, () => { countdown(n); tickSound(n); });
   }
-  // Welle läuft WÄHREND des Countdowns über alle Handys (ein Durchgang pro Sekunde)
-  countdownWave(p.t1);
+  // Welle & Partikel starten – läuft über alle Handys als durchgehende Animation
+  startWaveAnimation();
+  startSpawner();
   // Kurzer Blitz direkt nach dem Countdown, dann sofort Happy Birthday
   schedule(p.t1 + COUNT_START * 1000, () => flashOnce());
   // Buchstaben: kommen direkt nach dem Countdown, wandern von links nach rechts
@@ -357,27 +362,285 @@ function celebration() {
 }
 
 // ===== Welle über alle Handys WÄHREND des Countdowns =====
-// Ein leuchtender Licht-Band wandert pro Sekunde einmal von links nach rechts
-// über die ganze Handy-Reihe. Jedes Handy startet zeitlich exakt versetzt,
-// sodass es wie EIN durchgehendes Licht wirkt.
-function countdownWave(t1) {
-  const N = Math.max(1, displayCount);
-  const bandDur = 1000 / N; // Zeit, die das Band pro Handy braucht
-  for (let i = 0; i < COUNT_START; i++) {
-    schedule(t1 + i * 1000 + myPos * bandDur, () => sweepBand(bandDur));
-  }
+// ============================================================
+//  HOCHAUFLÖSENDE CANVAS-ANIMATION ÜBER ALLE HANDYS
+//  Jedes Handy rendert nur seinen Streifen eines gemeinsamen,
+//  über die Server-Zeit synchronisierten Gesamtbilds. Dadurch
+//  wirkt die Bewegung als EINE durchgehende Welle über die
+//  ganze Handy-Reihe (wie ein großes, zusammenhängendes Bild).
+// ============================================================
+const canvas = $("waveCanvas");
+const ctx = canvas.getContext("2d");
+let canvasW = 0, canvasH = 0, dpr = 1;
+let animActive = false;   // Animationsschleife läuft?
+let animStartServer = 0;  // Server-Zeit beim Start der Schleife
+
+// Canvas in hoher Auflösung skalieren (devicePixelRatio beachten)
+function resizeCanvas() {
+  dpr = window.devicePixelRatio || 1;
+  const r = canvas.getBoundingClientRect();
+  canvasW = r.width; canvasH = r.height;
+  canvas.width = Math.max(1, Math.round(r.width * dpr));
+  canvas.height = Math.max(1, Math.round(r.height * dpr));
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
-function sweepBand(bandDur) {
-  const band = $("lightwave");
-  band.style.display = "block";
-  band.style.transition = "none";
-  band.style.left = "-60%";
-  void band.offsetWidth;
-  band.style.transition = "left " + bandDur + "ms linear";
-  band.style.left = "100%";
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
+
+// Virtuelle Welt: die ganze Handy-Reihe hat die Breite `displayCount`
+// (in Einheiten "Handy-Breite"). Dieses Handy zeigt [myPos, myPos+1].
+const WORLD = () => Math.max(1, displayCount);
+// Welt-Koordinate -> Bildschirm-x auf diesem Handy
+function wx(wx) { return (wx - myPos) * canvasW; }
+// Ist eine Welt-x auf diesem Handy sichtbar?
+function visible(wx) { return wx >= myPos - 0.5 && wx <= myPos + 1.5; }
+
+// Partikel-Arten: glow-Wellen, Funken, Herzen, Konfetti
+let fxParticles = [];
+let fxTime = 0; // Sekunden seit Start (auf Server-Zeit basiert)
+
+// Licht-Wellen: mehrere Wellen, die mit konstanter Geschwindigkeit
+// über die GESAMTE Reihe wandern. phase bestimmt den Startpunkt.
+const WAVE_PERIOD = 5000; // ms für EINEN Durchlauf über alle Handys
+const WAVE_DEFS = [
+  { color: "#ffd166", width: 0.38, speed: 1.0,  phase: 0.0,  trail: 1.6 },
+  { color: "#f06595", width: 0.30, speed: 0.9,  phase: 0.33, trail: 1.5 },
+  { color: "#6bcbff", width: 0.26, speed: 0.75, phase: 0.66, trail: 1.5 },
+  { color: "#c084fc", width: 0.26, speed: 0.6,  phase: 0.15, trail: 1.4 },
+];
+
+// Obergrenze für gleichzeitige Partikel – verhindert, dass die Anzahl
+// unkontrolliert wächst und die Performance auf dem Handy leidet.
+const MAX_PARTICLES = 220;
+function atCap() { return fxParticles.length >= MAX_PARTICLES; }
+
+function spawnHeart() {
+  if (atCap()) return;
+  fxParticles.push({
+    kind: "heart",
+    x: canvasW * Math.random(),
+    y: canvasH + 20,
+    vy: -(40 + Math.random() * 60),
+    vx: (Math.random() - 0.5) * 20,
+    sway: 1 + Math.random(),
+    swayAmp: 10 + Math.random() * 20,
+    life: 8,
+    age: 0,
+    size: (14 + Math.random() * 18) * (dpr > 1 ? 1 : 1.6),
+    color: ["#ff6b9d", "#ff9ecf", "#f06595", "#c084fc"][Math.floor(Math.random() * 4)],
+  });
 }
 
-// "Warten"-Screen sauber ausblenden
+function spawnConfetti() {
+  if (atCap()) return;
+  const colors = ["#ff6b6b","#f06595","#ffd166","#6bcbff","#7dff8a","#c084fc","#ff9ecf"];
+  fxParticles.push({
+    kind: "confetti",
+    x: canvasW * Math.random(),
+    y: -20,
+    vy: 80 + Math.random() * 120,
+    vx: (Math.random() - 0.5) * 60,
+    rot: Math.random() * Math.PI * 2,
+    vr: (Math.random() - 0.5) * 6,
+    life: 12,
+    age: 0,
+    size: (5 + Math.random() * 6) * (dpr > 1 ? 1 : 1.5),
+    color: colors[Math.floor(Math.random() * colors.length)],
+  });
+}
+
+// Ein Stern-Funkeln im Hintergrund (nur auf diesem Handy verteilt)
+const twinkles = [];
+function initTwinkles() {
+  twinkles.length = 0;
+  for (let i = 0; i < 40; i++) {
+    twinkles.push({
+      x: Math.random(), y: Math.random(),
+      size: 0.5 + Math.random() * 1.6,
+      speed: 1 + Math.random() * 3,
+      phase: Math.random() * Math.PI * 2,
+      gold: Math.random() < 0.5,
+    });
+  }
+}
+initTwinkles();
+
+// Haupt-Renderfunktion: wird jede Frame aufgerufen
+function renderFrame(nowServer) {
+  ctx.clearRect(0, 0, canvasW, canvasH);
+  const t = animTime(); // Sekunden seit dem gemeinsamen Start (SEQ.t0)
+
+  // --- Hintergrund-Funkeln (Sterne / Goldstaub) ---
+  for (const s of twinkles) {
+    const a = 0.25 + 0.5 * (0.5 + 0.5 * Math.sin(s.speed * t * Math.PI + s.phase));
+    ctx.globalAlpha = a;
+    ctx.fillStyle = s.gold ? "#ffd166" : "#ffffff";
+    ctx.beginPath();
+    ctx.arc(s.x * canvasW, s.y * canvasH, s.size * (dpr > 1 ? 1 : 1.8), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // --- Durchgehende Licht-Wellen über die ganze Reihe (perfomant) ---
+  // Pro Welle nur 2 Fills: ein schmaler Schweif-Streifen (linearer Gradient)
+  // + ein kompakter Glow an der Spitze. Keine teuren Vollbild-Fills.
+  const h2 = canvasH / 2;
+  for (const w of WAVE_DEFS) {
+    const cx = ((t * 1000 / WAVE_PERIOD) * w.speed + w.phase) % 1;
+    const center = cx * (WORLD() + 1) - 0.5; // Welt-Spitze der Welle
+    const back = center - w.trail;           // Welt-Ende des Schweifs
+    const x0 = wx(back);
+    const x1 = wx(center);
+    // Nur zeichnen, wenn der Schweifbereich dieses Handy überhaupt berührt
+    if (x1 < -canvasW * 0.5 || x0 > canvasW * 1.5) continue;
+    // Schweif: schmaler Streifen mit linearem Farbverlauf in Bewegungsrichtung
+    const bandW = Math.max(1, Math.abs(x1 - x0));
+    const left = Math.min(x0, x1);
+    const lg = ctx.createLinearGradient(left, 0, left + bandW, 0);
+    lg.addColorStop(0, hexA(w.color, 0));
+    lg.addColorStop(1, hexA(w.color, 0.45));
+    ctx.fillStyle = lg;
+    ctx.fillRect(left, 0, bandW, canvasH);
+    // Helle, kompakte Spitze: nur ein schmaler Glow-Bereich
+    const glowR = canvasW * w.width;
+    const g = ctx.createRadialGradient(x1, h2, 0, x1, h2, glowR);
+    g.addColorStop(0, hexA(w.color, 0.9));
+    g.addColorStop(0.5, hexA(w.color, 0.35));
+    g.addColorStop(1, hexA(w.color, 0));
+    ctx.fillStyle = g;
+    ctx.fillRect(x1 - glowR, 0, glowR * 2, canvasH);
+  }
+
+  // --- Partikel zeichnen & updaten ---
+  const dt = 1 / 60;
+  for (let i = fxParticles.length - 1; i >= 0; i--) {
+    const p = fxParticles[i];
+    p.age += dt;
+    if (p.age >= p.life) { fxParticles.splice(i, 1); continue; }
+
+    if (p.kind === "spark") {
+      p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 600 * dt;
+      const lifeFrac = 1 - p.age / p.life;
+      ctx.globalAlpha = lifeFrac;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * lifeFrac, 0, Math.PI * 2);
+      ctx.fill();
+      // Glow
+      const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 4 * lifeFrac);
+      g.addColorStop(0, hexA(p.color, 0.5 * lifeFrac));
+      g.addColorStop(1, hexA(p.color, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.size * 4 * lifeFrac, 0, Math.PI * 2); ctx.fill();
+    } else if (p.kind === "heart") {
+      p.x += Math.sin(p.age * p.sway) * p.swayAmp * dt + p.vx * dt;
+      p.y += p.vy * dt;
+      const a = p.age < p.life - 1 ? 1 : Math.max(0, (p.life - p.age));
+      ctx.globalAlpha = a;
+      drawHeart(ctx, p.x, p.y, p.size, p.color);
+    } else if (p.kind === "confetti") {
+      p.x += p.vx * dt + Math.sin(p.age * 3) * 20 * dt;
+      p.y += p.vy * dt;
+      p.rot += p.vr * dt;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.size / 2, -p.size / 3, p.size, p.size * 0.66);
+      ctx.restore();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawHeart(c, x, y, s, color) {
+  c.save();
+  c.translate(x, y);
+  c.scale(s / 20, s / 20);
+  c.fillStyle = color;
+  c.beginPath();
+  c.moveTo(0, 5);
+  c.bezierCurveTo(-11, -3, -6, -11, 0, -4);
+  c.bezierCurveTo(6, -11, 11, -3, 0, 5);
+  c.fill();
+  c.restore();
+}
+
+// Hilfsfunktion: hex-Farbe mit Alpha
+function hexA(hex, a) {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  return `rgba(${r},${g},${b},${Math.max(0, Math.min(1, a))})`;
+}
+
+// Startet die dauerhafte Canvas-Schleife (Server-Zeit als gemeinsame Uhr)
+let rafId = null;
+// Referenzzeit für die Animation: an SEQ.t0 verankert, damit ALLE Handys
+// exakt dieselbe Wellenphase sehen (perfekte, durchgehende Bewegung über die Reihe).
+let animAnchor = 0;
+function animTime() { return (serverNow() - animAnchor) / 1000; }
+function startWaveAnimation() {
+  if (animActive) return;
+  animActive = true;
+  animAnchor = (SEQ && SEQ.payload && SEQ.payload.t0) ? SEQ.payload.t0 : serverNow();
+  animStartServer = serverNow();
+  fxParticles = [];
+  function loop() {
+    if (!animActive) return;
+    renderFrame(serverNow());
+    rafId = requestAnimationFrame(loop);
+  }
+  rafId = requestAnimationFrame(loop);
+}
+function stopWaveAnimation() {
+  animActive = false;
+  if (rafId) cancelAnimationFrame(rafId);
+  ctx.clearRect(0, 0, canvasW, canvasH);
+}
+
+// Während der Show immer wieder neue Partikel erzeugen
+let fxSpawner = null;
+function startSpawner() {
+  stopSpawner();
+  fxSpawner = setInterval(() => {
+    if (!animActive) return;
+    const t = animTime();
+    // Hauptwelle erzeugt Funken, wenn sie dieses Handy überquert
+    const cx = (t * 1000 / WAVE_PERIOD) % 1;
+    const center = cx * (WORLD() + 1) - 0.5;
+    if (visible(center)) {
+      const sx = wx(center);
+      // Bei hoher Partikelzahl weniger Funken pro Tick erzeugen
+      const n = atCap() ? 0 : (fxParticles.length > MAX_PARTICLES * 0.7 ? 3 : 6);
+      for (let i = 0; i < n; i++) {
+        fxParticles.push({
+          kind: "spark",
+          x: sx + (Math.random() - 0.5) * canvasW * 0.2,
+          y: canvasH * (0.15 + Math.random() * 0.7),
+          vx: (Math.random() - 0.5) * 160,
+          vy: -Math.random() * 240 - 60,
+          life: 0.8 + Math.random() * 1,
+          age: 0,
+          size: (2 + Math.random() * 3.5) * (dpr > 1 ? 1 : 1.6),
+          color: ["#fff6d8", "#ffd166", "#ff9ecf", "#a5e3ff"][Math.floor(Math.random() * 4)],
+        });
+      }
+    }
+    // Ab und zu Herzen aufsteigen lassen (Geburtstags-Theme)
+    if (Math.random() < 0.4) spawnHeart();
+  }, 120);
+}
+function stopSpawner() { if (fxSpawner) { clearInterval(fxSpawner); fxSpawner = null; } }
+
+// Konfetti-Regenschauer (z.B. beim Finale)
+function confettiBurst(count) {
+  for (let i = 0; i < (count || 40); i++) spawnConfetti();
+}
+
+// ===== Warten-Screen ausblenden =====
 function hideWait() {
   const w = $("wait");
   w.classList.add("fade-out");
@@ -403,23 +666,6 @@ function flashOnce() {
   setTimeout(()=>{ fl.style.display = "none"; }, 320);
 }
 
-// ===== Licht-Welle (von einem Handy zum nächsten) =====
-// Jedes Handy lässt das Licht-Band in seiner Position von links nach rechts
-// wandern. Der Start ist zeitlich exakt versetzt, sodass es wie EIN durchgehendes
-// Licht wirkt, das über die ganze Handy-Reihe läuft.
-function flyWave(startTime, step) {
-  const band = $("lightwave");
-  const delay = Math.max(0, startTime - serverNow());
-  band.style.display = "block";
-  band.style.transition = "none";
-  band.style.left = "-60%";
-  void band.offsetWidth;
-  band.style.transition = "left " + step + "ms linear";
-  setTimeout(() => {
-    band.style.left = "100%";
-  }, delay);
-}
-
 // ===== Buchstabe =====
 // Jedes Handy zeigt GENAU EINEN Buchstaben, sodass alle zusammen
 // "HAPPY BIRTHDAY" ergeben (jedes Handy = 1 Zeichen). Position myPos = Index im Text.
@@ -437,8 +683,6 @@ function startLetterSweep() {
   // alle Handys exakt gleichzeitig arbeiten)
   const nowServer = serverNow();
   const myReveal = nowServer + myPos * step;
-  // Licht-Welle über die Reihe laufen lassen
-  flyWave(myReveal, step);
   // Buchstabe dieses Handys genau dann einblenden
   setTimeout(() => showLetter(), Math.max(0, myReveal - serverNow()));
   // Fanfare nur auf dem ersten Handy spielen (Position 0)
@@ -447,49 +691,29 @@ function startLetterSweep() {
 
 function showLetter() {
   $("countdown").style.display = "none";
-  $("fx").style.display = "none";
-  $("lightwave").style.display = "none";
+  // Sanfter Glow hinter den Buchstaben einschalten (Canvas-Welle läuft weiter)
+  $("letterGlow").style.display = "block";
   const content = assignContent(myPos);
   const ch = $("letterCh");
   ch.textContent = content || "🎉";
   ch.classList.remove("in"); void ch.offsetWidth; ch.classList.add("in");
   $("letter").style.display = "flex";
-}
-
-function launchConfetti(containerId) {
-  const c = $(containerId || "confetti");
-  c.innerHTML = "";
-  const style = document.createElement("style");
-  style.textContent = "@keyframes fall{to{transform:translate(var(--dx),112vh) rotate(720deg);}}";
-  style.id = "confettiStyle";
-  const old = document.getElementById("confettiStyle"); if (old) old.remove();
-  document.head.appendChild(style);
-  const colors = ["#ff6b6b","#f06595","#ffd166","#6bcbff","#7dff8a","#c084fc"];
-  for (let i=0;i<60;i++){
-    const p = document.createElement("div");
-    const w = 6 + Math.random()*8;
-    p.style.cssText = "position:absolute;left:"+Math.random()*100+"%;top:-12%;width:"+w+"px;"+
-      "height:"+(w*1.6)+"px;border-radius:2px;"+
-      "background:"+colors[i%colors.length]+";"+
-      "animation:fall "+(1.8+Math.random()*2.2)+"s linear "+(Math.random()*0.6)+"s forwards;";
-    p.style.setProperty("--dx", (Math.random()*160-80)+"px");
-    c.appendChild(p);
-  }
+  // Kurzer Konfetti-Funken bei jedem Buchstaben, besonders beim ersten
+  confettiBurst(myPos === 0 ? 24 : 8);
 }
 
 // ===== Finale (Konfetti über dem stehenbleibenden Buchstaben) =====
 function showFinale() {
-  // Buchstabe bleibt die ganze Zeit sichtbar – nur Konfetti kommt dazu
+  // Buchstabe bleibt sichtbar – die Canvas-Welle läuft weiter und es gibt
+  // einen großen Konfetti-Regenschauer über ALLE Handys gleichzeitig.
   $("countdown").style.display = "none";
-  $("fx").style.display = "none";
-  $("lightwave").style.display = "none";
-  $("finale").style.display = "block";
-  launchConfetti("confettiFinale");
+  $("letterGlow").style.display = "block";
+  confettiBurst(50);
   celebration();
+  // Konfetti in Wellen nachschieben
+  setTimeout(() => confettiBurst(30), 700);
+  setTimeout(() => confettiBurst(40), 1600);
 }
 </script>
-<style>
-@keyframes twinkle { 0%,100%{opacity:.2; transform:scale(.6);} 50%{opacity:1; transform:scale(1.2);} }
-</style>
 </body>
 </html>

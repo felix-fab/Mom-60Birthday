@@ -38,6 +38,24 @@ Eine Website, bei der mehrere Personen ihre Handys nebeneinander halten. Über a
 > Die Handys öffnen dann `https://geburtstag.felixfab.de/display` und verbinden
 > sich automatisch per `wss://` – auch über das Internet hinweg.
 
+## Installieren als App (PWA)
+
+Die Handy-Seite ist eine **installierbare Web-App (PWA)** – so kann man sie auf
+Android als eigene App installieren und sie läuft dann **ohne Browser-Leiste**
+(im Vollbild/Standalone-Modus):
+
+1. Die Handy-Seite im **Chrome**-Browser auf Android öffnen (über den QR-Code).
+2. Im Browser-Menü (⋮) auf **„App installieren"** (oder „Zum Startbildschirm") tippen.
+   Manchmal erscheint auch automatisch ein Installations-Hinweis.
+3. Die App wird auf dem Startbildschirm abgelegt und öffnet sich künftig wie eine
+   eigene App – **ohne Adressleiste**, im Vollbild.
+
+> 💡 **Hinweis:** Auf iOS (Safari) kann man die Seite über „Zum Home-Bildschirm"
+> hinzufügen – dann läuft sie ebenfalls ohne Browser-Leiste.
+>
+> 💡 Die PWA-Funktionen (Manifest, Icons, Service Worker) liegen unter
+> `public/manifest.json`, `public/icons/` und `public/sw.js`.
+
 ## Ablauf für die Feier
 
 1. **Vorbereiten:** Server starten, Steuerungs-Seite am Laptop/Beamer öffnen.
@@ -54,6 +72,15 @@ Eine Website, bei der mehrere Personen ihre Handys nebeneinander halten. Über a
      nach rechts aufleuchtend (mit Fanfare). **Nur die Buchstaben** sind zu sehen.
    - Die Buchstaben **bleiben die ganze Zeit stehen** – zum Schluss kommt noch
      **Konfetti und Sound** dazu.
+
+> 🎆 **Die Animation (hochauflösend, über alle Handys):** Jedes Handy rendert auf
+> einem eigenen **Canvas** (in voller Geräte-Auflösung, inkl. Retina/`devicePixelRatio`)
+> nur **seinen Streifen** eines gemeinsamen, über die Server-Zeit exakt synchronisierten
+> Gesamtbilds. Dadurch läuft eine **durchgehende, mehrfarbige Lichtwelle mit Funken
+> und Schweif** nahtlos von einem Handy zum nächsten – wie ein großes, zusammenhängendes
+> Bild über die ganze Reihe. Dazu kommen aufsteigende **Herzen**, goldener **Sternenstaub**,
+> ein pulsierender **Kerzenlicht-Glow** hinter den Buchstaben und ein großer
+> **Konfetti-Regenschauer** zum Finale.
 
 > 💡 **Idealfall:** Genau **14 Geräte** ergeben das perfekte „HAPPY BIRTHDAY"
 > (jedes Handy = 1 Buchstabe, inkl. Leerzeichen). Jedes Handy zeigt immer nur
